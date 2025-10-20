@@ -16,7 +16,7 @@ app = FastAPI(title="ISCA-k Imputation API")
 # CORS - permite requests do GitHub Pages
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, especifica o domínio do GitHub Pages
+    allow_origins=["https://r-vicente.github.io"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
