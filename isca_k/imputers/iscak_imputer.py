@@ -4,11 +4,11 @@ import time
 from pathlib import Path
 from collections import defaultdict
 
-from preprocessing.type_detection import MixedDataHandler
-from preprocessing.scaling import get_scaled_data, compute_range_factors
-from core.mi_calculator import calculate_mi_mixed
-from core.distances import weighted_euclidean_batch, range_normalized_mixed_distance
-from core.adaptive_k import adaptive_k_from_distances
+from ..preprocessing.type_detection import MixedDataHandler
+from ..preprocessing.scaling import get_scaled_data, compute_range_factors
+from ..core.mi_calculator import calculate_mi_mixed
+from ..core.distances import weighted_euclidean_batch, range_normalized_mixed_distance
+from ..core.adaptive_k import adaptive_k_from_distances
 
 class ISCAkCore:
     def __init__(self, min_friends: int = 3, max_friends: int = 15, 
