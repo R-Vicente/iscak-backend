@@ -22,6 +22,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def convert_numpy_types(obj):
+    """Converte tipos numpy para tipos Python nativos"""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {k: convert_numpy_types(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_numpy_types(item) for item in obj)
+    else:
+        return obj
+
 class ImputationRequest(BaseModel):
     csv_data: str
     min_friends: int = 3
@@ -64,8 +81,8 @@ async def impute_data(request: ImputationRequest):
                 stats={
                     "initial_missing": 0,
                     "final_missing": 0,
-                    "rows": len(df),
-                    "columns": len(df.columns)
+                    "rows": int(len(df)),  # ✅ Converte para int
+                    "columns": int(len(df.columns))  # ✅ Converte para int
                 }
             )
         
@@ -75,17 +92,17 @@ async def impute_data(request: ImputationRequest):
             max_friends=request.max_friends,
             mi_neighbors=request.mi_neighbors,
             n_jobs=-1,
-            verbose=False,  # Desativa prints para API
+            verbose=False,
             max_cycles=request.max_cycles,
             categorical_threshold=request.categorical_threshold
         )
         
-        # Imputa (non-interactive mode para API)
+        # Imputa
         df_imputed = imputer.impute(
             df,
             force_categorical=None,
             force_ordinal=None,
-            interactive=False,  # CRITICAL: Não pode ser interativo na API
+            interactive=False,
             column_types_config=None
         )
         
@@ -94,10 +111,10 @@ async def impute_data(request: ImputationRequest):
         df_imputed.to_csv(output, index=False)
         csv_imputed = output.getvalue()
         
-        # Estatísticas
-        stats = imputer.execution_stats
-        stats['rows'] = len(df)
-        stats['columns'] = len(df.columns)
+        # Estatísticas - CONVERTE NUMPY TYPES ✅
+        stats = convert_numpy_types(imputer.execution_stats)
+        stats['rows'] = int(len(df))
+        stats['columns'] = int(len(df.columns))
         
         return ImputationResponse(
             csv_data=csv_imputed,
