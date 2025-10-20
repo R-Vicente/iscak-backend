@@ -3,7 +3,7 @@ import pandas as pd
 from collections import defaultdict
 from sklearn.feature_selection import mutual_info_regression
 
-from core.distances import quantile_lookup_batch
+from ..core.distances import quantile_lookup_batch
 
 class IMRInitializer:
     def __init__(self, n_iterations: int = 3, min_samples: int = 10):
