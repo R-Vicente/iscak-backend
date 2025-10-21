@@ -1,14 +1,19 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import io
 import sys
+import uvicorn
+import logging
 from pathlib import Path
 
 # Adiciona o diretório do projeto ao path
 sys.path.insert(0, str(Path(__file__).parent))
+
+# Desativar logs de acesso detalhados
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 from isca_k.iscak_core import ISCAkCore
 
@@ -22,6 +27,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware para não logar IPs
+@app.middleware("http")
+async def remove_ip_from_logs(request: Request, call_next):
+    response = await call_next(request)
+    return response
 
 def convert_numpy_types(obj):
     """Converte tipos numpy para tipos Python nativos"""
@@ -82,8 +93,8 @@ async def impute_data(request: ImputationRequest):
                 stats={
                     "initial_missing": 0,
                     "final_missing": 0,
-                    "rows": int(len(df)),  # ✅ Converte para int
-                    "columns": int(len(df.columns))  # ✅ Converte para int
+                    "rows": int(len(df)),  
+                    "columns": int(len(df.columns))  
                 }
             )
         
@@ -112,7 +123,7 @@ async def impute_data(request: ImputationRequest):
         df_imputed.to_csv(output, index=False)
         csv_imputed = output.getvalue()
         
-        # Estatísticas - CONVERTE NUMPY TYPES ✅
+        # Estatísticas - CONVERTE NUMPY TYPES 
         stats = convert_numpy_types(imputer.execution_stats)
         stats['rows'] = int(len(df))
         stats['columns'] = int(len(df.columns))
@@ -131,5 +142,9 @@ async def impute_data(request: ImputationRequest):
         )
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8000,
+        log_level="warning"  # Reduz verbosity
+    )
