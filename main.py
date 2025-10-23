@@ -361,7 +361,8 @@ async def benchmark_methods(request: BenchmarkRequest):
         # Load dataset from URL
         response = requests.get(dataset_urls[request.dataset])
         response.raise_for_status()
-        df_original = pd.read_json(io.StringIO(response.text))
+        data_json = response.json()
+        df_original = pd.DataFrame(data_json["data"], columns=data_json["column_names"])
 
         # Store results for each method
         all_results = {}
