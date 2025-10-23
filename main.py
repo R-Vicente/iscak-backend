@@ -454,6 +454,9 @@ async def benchmark_methods(request: BenchmarkRequest):
         )
 
     except Exception as e:
+        import traceback
+        print("\n❌ Benchmark error:", e)
+        traceback.print_exc()  
         raise HTTPException(
             status_code=500,
             detail=f"Benchmark failed: {str(e)}"
