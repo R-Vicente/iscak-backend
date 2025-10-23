@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 from isca_k.iscak_core import ISCAkCore
+from imputation_methods import impute_knn, impute_mice, impute_missforest
 
 app = FastAPI(title="ISCA-k Imputation API")
 
@@ -64,6 +65,21 @@ class ImputationResponse(BaseModel):
     success: bool
     message: str
     stats: dict = None
+
+class KNNRequest(BaseModel):
+    csv_data: str
+    k: int = 5
+
+class MICERequest(BaseModel):
+    csv_data: str
+    max_iter: int = 10
+    random_state: int = 42
+
+class MissForestRequest(BaseModel):
+    csv_data: str
+    n_estimators: int = 10
+    max_iter: int = 10
+    random_state: int = 42
 
 @app.get("/")
 def read_root():
@@ -141,10 +157,176 @@ async def impute_data(request: ImputationRequest):
             detail=f"Imputation failed: {str(e)}"
         )
 
+@app.post("/impute/knn", response_model=ImputationResponse)
+async def impute_knn_endpoint(request: KNNRequest):
+    try:
+        # Parse CSV
+        df = pd.read_csv(io.StringIO(request.csv_data))
+
+        # Check for missing values
+        missing_count = df.isna().sum().sum()
+        if missing_count == 0:
+            return ImputationResponse(
+                csv_data=request.csv_data,
+                success=True,
+                message="No missing values detected",
+                stats={
+                    "initial_missing": 0,
+                    "final_missing": 0,
+                    "rows": int(len(df)),
+                    "columns": int(len(df.columns))
+                }
+            )
+
+        # Impute using kNN
+        df_imputed = impute_knn(df, k=request.k)
+
+        # Convert back to CSV
+        output = io.StringIO()
+        df_imputed.to_csv(output, index=False)
+        csv_imputed = output.getvalue()
+
+        # Stats
+        stats = {
+            'initial_missing': int(missing_count),
+            'final_missing': int(df_imputed.isna().sum().sum()),
+            'rows': int(len(df)),
+            'columns': int(len(df.columns)),
+            'method': 'kNN',
+            'k': request.k
+        }
+
+        return ImputationResponse(
+            csv_data=csv_imputed,
+            success=True,
+            message="kNN imputation completed successfully",
+            stats=stats
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"kNN imputation failed: {str(e)}"
+        )
+
+@app.post("/impute/mice", response_model=ImputationResponse)
+async def impute_mice_endpoint(request: MICERequest):
+    try:
+        # Parse CSV
+        df = pd.read_csv(io.StringIO(request.csv_data))
+
+        # Check for missing values
+        missing_count = df.isna().sum().sum()
+        if missing_count == 0:
+            return ImputationResponse(
+                csv_data=request.csv_data,
+                success=True,
+                message="No missing values detected",
+                stats={
+                    "initial_missing": 0,
+                    "final_missing": 0,
+                    "rows": int(len(df)),
+                    "columns": int(len(df.columns))
+                }
+            )
+
+        # Impute using MICE
+        df_imputed = impute_mice(
+            df,
+            max_iter=request.max_iter,
+            random_state=request.random_state
+        )
+
+        # Convert back to CSV
+        output = io.StringIO()
+        df_imputed.to_csv(output, index=False)
+        csv_imputed = output.getvalue()
+
+        # Stats
+        stats = {
+            'initial_missing': int(missing_count),
+            'final_missing': int(df_imputed.isna().sum().sum()),
+            'rows': int(len(df)),
+            'columns': int(len(df.columns)),
+            'method': 'MICE',
+            'max_iter': request.max_iter
+        }
+
+        return ImputationResponse(
+            csv_data=csv_imputed,
+            success=True,
+            message="MICE imputation completed successfully",
+            stats=stats
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"MICE imputation failed: {str(e)}"
+        )
+
+@app.post("/impute/missforest", response_model=ImputationResponse)
+async def impute_missforest_endpoint(request: MissForestRequest):
+    try:
+        # Parse CSV
+        df = pd.read_csv(io.StringIO(request.csv_data))
+
+        # Check for missing values
+        missing_count = df.isna().sum().sum()
+        if missing_count == 0:
+            return ImputationResponse(
+                csv_data=request.csv_data,
+                success=True,
+                message="No missing values detected",
+                stats={
+                    "initial_missing": 0,
+                    "final_missing": 0,
+                    "rows": int(len(df)),
+                    "columns": int(len(df.columns))
+                }
+            )
+
+        # Impute using MissForest
+        df_imputed = impute_missforest(
+            df,
+            n_estimators=request.n_estimators,
+            max_iter=request.max_iter,
+            random_state=request.random_state
+        )
+
+        # Convert back to CSV
+        output = io.StringIO()
+        df_imputed.to_csv(output, index=False)
+        csv_imputed = output.getvalue()
+
+        # Stats
+        stats = {
+            'initial_missing': int(missing_count),
+            'final_missing': int(df_imputed.isna().sum().sum()),
+            'rows': int(len(df)),
+            'columns': int(len(df.columns)),
+            'method': 'MissForest',
+            'n_estimators': request.n_estimators,
+            'max_iter': request.max_iter
+        }
+
+        return ImputationResponse(
+            csv_data=csv_imputed,
+            success=True,
+            message="MissForest imputation completed successfully",
+            stats=stats
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"MissForest imputation failed: {str(e)}"
+        )
+
 if __name__ == "__main__":
     uvicorn.run(
-        app, 
-        host="0.0.0.0", 
+        app,
+        host="0.0.0.0",
         port=8000,
         log_level="warning"  # Reduz verbosity
     )
