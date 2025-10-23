@@ -5,6 +5,8 @@ Adapted from notebook with 3 strategies: numeric, mixed, categorical
 
 import pandas as pd
 import numpy as np
+# Enable experimental IterativeImputer
+from sklearn.experimental import enable_iterative_imputer  # noqa
 from sklearn.impute import KNNImputer, IterativeImputer
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 
