@@ -36,6 +36,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import math
+
+def clean_floats(obj):
+    """Recursively replace NaN and inf values by None in nested dicts/lists."""
+    if isinstance(obj, dict):
+        return {k: clean_floats(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_floats(v) for v in obj]
+    elif isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+    return obj
+
+
 # Middleware para não logar IPs
 @app.middleware("http")
 async def remove_ip_from_logs(request: Request, call_next):
@@ -450,7 +464,7 @@ async def benchmark_methods(request: BenchmarkRequest):
         return BenchmarkResponse(
             success=True,
             message=f"Benchmark completed: {len(request.methods)} methods, {request.n_runs} runs each",
-            results=all_results
+            results=clean_floats(all_results)
         )
 
     except Exception as e:
