@@ -7,6 +7,7 @@ import io
 import sys
 import uvicorn
 import logging
+import requests
 from pathlib import Path
 
 # Adiciona o diretório do projeto ao path
@@ -358,7 +359,6 @@ async def benchmark_methods(request: BenchmarkRequest):
             )
 
         # Load dataset from URL
-        import requests
         response = requests.get(dataset_urls[request.dataset])
         response.raise_for_status()
         df_original = pd.read_json(io.StringIO(response.text))
